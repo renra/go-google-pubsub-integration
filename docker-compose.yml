@@ -1,0 +1,13 @@
+version: "3"
+services:
+  app:
+    build: .
+    command: make test
+    environment:
+      - SHELL=/bin/sh
+    volumes:
+      - ./integration/:/go/src/app/integration/
+      - ./test/:/go/src/app/test/
+      - ./examples/:/go/src/app/examples/
+      - ./Makefile:/go/src/app/Makefile
+
