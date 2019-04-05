@@ -3,10 +3,6 @@ SOURCES=./
 dep:
 	dep ensure
 
-.PHONY: examples
-examples:
-	go run ${SOURCES}/examples/main.go
-
 .PHONY: test
 .DEFAULT_GOAL := test
 test:
