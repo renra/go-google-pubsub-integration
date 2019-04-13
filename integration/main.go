@@ -45,6 +45,14 @@ func (m *Message) Payload() []byte {
   return m.Message.Data
 }
 
+func (m *Message) Attributes() map[string]string {
+  return m.Message.Attributes
+}
+
+func (m *Message) Event() string {
+  return m.Message.Attributes["event"]
+}
+
 func (m *Message) Ack() {
   m.Message.Ack()
 }
@@ -63,8 +71,8 @@ func (i *Integration) Close() {
   i.Topic.Stop()
 }
 
-func (i *Integration) Publish(ctx context.Context, payload string) *googlePubsub.PublishResult {
-  return i.Topic.Publish(ctx, &googlePubsub.Message{Data: []byte(payload)})
+func (i *Integration) Publish(ctx context.Context, payload string, attributes map[string]string) *googlePubsub.PublishResult {
+  return i.Topic.Publish(ctx, &googlePubsub.Message{Data: []byte(payload), Attributes: attributes})
 }
 
 func (i *Integration) Receive(ctx context.Context, subscriptionName string, handler func(*Message)) *errtrace.Error {
