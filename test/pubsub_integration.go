@@ -114,9 +114,15 @@ type SubscriptionMock struct {
 
 var messageId string = "12"
 var messagePayload string = "Message payload"
+var messageEvent string = "MessageSent"
+var messageAttributes map[string]string = map[string]string{ "event": messageEvent }
 
 func (s *SubscriptionMock) Receive(ctx context.Context, handler func(context.Context, *googlePubsub.Message)) *errtrace.Error {
-  handler(ctx, &googlePubsub.Message{ID: messageId, Data: []byte(messagePayload)})
+  handler(ctx, &googlePubsub.Message{
+    ID: messageId,
+    Data: []byte(messagePayload),
+    Attributes: messageAttributes,
+  })
   args := s.Called(ctx, handler)
   errorArg := args.Get(0)
 
@@ -220,6 +226,7 @@ func (suite *PubsubIntegrationSuite) TestPublish() {
   topicMock := TopicMock{}
   publishResult := googlePubsub.PublishResult{}
   payload := "Here's a message for you"
+  attributes := map[string]string{"event":"something_happened"}
 
   topicMock.On("Exists", ctx).Return(true, nil).Once()
   topicMock.On(
@@ -227,6 +234,7 @@ func (suite *PubsubIntegrationSuite) TestPublish() {
     ctx,
     mock.MatchedBy(func(message *googlePubsub.Message) bool {
       assert.Equal(suite.T(), payload, string(message.Data))
+      assert.Equal(suite.T(), attributes, message.Attributes)
 
       return true
     }),
@@ -237,7 +245,7 @@ func (suite *PubsubIntegrationSuite) TestPublish() {
   pubsub, err := pubsubIntegration.NewIntegration(ctx, suite.clientMock, suite.topicName)
   assert.Nil(suite.T(), err)
 
-  result := pubsub.Publish(ctx, payload)
+  result := pubsub.Publish(ctx, payload, attributes)
 
   assert.Equal(suite.T(), &publishResult, result)
 
@@ -275,6 +283,8 @@ func (suite *PubsubIntegrationSuite) TestReceive_SubscriptionExists() {
     assert.NotNil(suite.T(), message)
     assert.Equal(suite.T(), messageId, string(message.Id()))
     assert.Equal(suite.T(), messagePayload, string(message.Payload()))
+    assert.Equal(suite.T(), messageEvent, message.Event())
+    assert.Equal(suite.T(), messageAttributes, message.Attributes())
   })
 
   assert.Nil(suite.T(), err)
@@ -330,6 +340,8 @@ func (suite *PubsubIntegrationSuite) TestReceive_SubscriptionDoesNotExist() {
     assert.NotNil(suite.T(), message)
     assert.Equal(suite.T(), messageId, string(message.Id()))
     assert.Equal(suite.T(), messagePayload, string(message.Payload()))
+    assert.Equal(suite.T(), messageEvent, message.Event())
+    assert.Equal(suite.T(), messageAttributes, message.Attributes())
   })
 
   assert.Nil(suite.T(), err)
@@ -340,6 +352,8 @@ func (suite *PubsubIntegrationSuite) TestReceive_SubscriptionDoesNotExist() {
     assert.NotNil(suite.T(), message)
     assert.Equal(suite.T(), messageId, string(message.Id()))
     assert.Equal(suite.T(), messagePayload, string(message.Payload()))
+    assert.Equal(suite.T(), messageEvent, message.Event())
+    assert.Equal(suite.T(), messageAttributes, message.Attributes())
   })
 
   assert.Nil(suite.T(), err)
@@ -387,6 +401,8 @@ func (suite *PubsubIntegrationSuite) TestReceive_SubscriptionDoesNotExist_Failed
     assert.NotNil(suite.T(), message)
     assert.Equal(suite.T(), messageId, string(message.Id()))
     assert.Equal(suite.T(), messagePayload, string(message.Payload()))
+    assert.Equal(suite.T(), messageEvent, message.Event())
+    assert.Equal(suite.T(), messageAttributes, message.Attributes())
   })
 
   assert.Equal(suite.T(), creationError.Error(), err.Error())

@@ -36,6 +36,10 @@ func main() {
   pubsub.Receive(ctx, subscriptionName, func(message *pubsubIntegration.Message){
     fmt.Println(fmt.Sprintf("I've just received a message: %s", message.Id()))
     fmt.Println(fmt.Sprintf("It says: %s", message.Payload()))
+    fmt.Println(fmt.Sprintf("It has attributes: %v", message.Attributes()))
+
+    // This just reads message.Attributes()["event"]
+    fmt.Println(fmt.Sprintf("Event name: %v", message.Event()))
   })
 }
 ```
