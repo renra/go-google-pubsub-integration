@@ -254,18 +254,20 @@ func (suite *PubsubIntegrationSuite) TestPublish() {
 }
 
 func (suite *PubsubIntegrationSuite) TestReceive_SubscriptionExists() {
-  ctx := context.Background()
+  receiveCtx := context.Background()
+  ctxWithDeadline, _ := context.WithDeadline(receiveCtx, time.Now().Add(20*time.Second))
+
   handlerCalled := false
 
   topicMock := TopicMock{}
   subscriptionMock := SubscriptionMock{}
 
-  topicMock.On("Exists", ctx).Return(true, nil).Once()
+  topicMock.On("Exists", ctxWithDeadline).Return(true, nil).Once()
 
-  subscriptionMock.On("Exists", ctx).Return(true, nil).Once()
+  subscriptionMock.On("Exists", ctxWithDeadline).Return(true, nil).Once()
   subscriptionMock.On(
     "Receive",
-    ctx,
+    receiveCtx,
     mock.MatchedBy(func(handler func (ctx context.Context, message *googlePubsub.Message)) bool {
       return true
     }),
@@ -274,10 +276,10 @@ func (suite *PubsubIntegrationSuite) TestReceive_SubscriptionExists() {
   suite.clientMock.On("Topic", suite.topicName).Return(&topicMock).Once()
   suite.clientMock.On("Subscription", suite.subscriptionName).Return(&subscriptionMock).Once()
 
-  pubsub, err := pubsubIntegration.NewIntegration(ctx, suite.clientMock, suite.topicName)
+  pubsub, err := pubsubIntegration.NewIntegration(ctxWithDeadline, suite.clientMock, suite.topicName)
   assert.Nil(suite.T(), err)
 
-  err = pubsub.Receive(ctx, suite.subscriptionName, func(message *pubsubIntegration.Message) {
+  err = pubsub.Receive(ctxWithDeadline, receiveCtx, suite.subscriptionName, func(message *pubsubIntegration.Message) {
     handlerCalled = true
 
     assert.NotNil(suite.T(), message)
@@ -296,7 +298,9 @@ func (suite *PubsubIntegrationSuite) TestReceive_SubscriptionExists() {
 }
 
 func (suite *PubsubIntegrationSuite) TestReceive_SubscriptionDoesNotExist() {
-  ctx := context.Background()
+  receiveCtx := context.Background()
+  ctxWithDeadline, _ := context.WithDeadline(receiveCtx, time.Now().Add(20*time.Second))
+
   handlerCalled := false
   handlerCalledSecondTime := false
 
@@ -305,17 +309,17 @@ func (suite *PubsubIntegrationSuite) TestReceive_SubscriptionDoesNotExist() {
   createdSubscriptionMock := SubscriptionMock{}
   googlePubsubTopic := googlePubsub.Topic{}
 
-  topicMock.On("Exists", ctx).Return(true, nil).Once()
+  topicMock.On("Exists", ctxWithDeadline).Return(true, nil).Once()
   topicMock.On("WrappedTopic").Return(&googlePubsubTopic).Once()
 
-  subscriptionMock.On("Exists", ctx).Return(false, nil).Once()
+  subscriptionMock.On("Exists", ctxWithDeadline).Return(false, nil).Once()
 
   suite.clientMock.On("Topic", suite.topicName).Return(&topicMock).Once()
   suite.clientMock.On("Subscription", suite.subscriptionName).Return(&subscriptionMock).Once()
 
   suite.clientMock.On(
     "CreateSubscription",
-    ctx,
+    ctxWithDeadline,
     suite.subscriptionName,
     googlePubsub.SubscriptionConfig{
       Topic: &googlePubsubTopic,
@@ -325,16 +329,16 @@ func (suite *PubsubIntegrationSuite) TestReceive_SubscriptionDoesNotExist() {
 
   createdSubscriptionMock.On(
     "Receive",
-    ctx,
+    receiveCtx,
     mock.MatchedBy(func(handler func (ctx context.Context, message *googlePubsub.Message)) bool {
       return true
     }),
   ).Return(nil).Twice()
 
-  pubsub, err := pubsubIntegration.NewIntegration(ctx, suite.clientMock, suite.topicName)
+  pubsub, err := pubsubIntegration.NewIntegration(ctxWithDeadline, suite.clientMock, suite.topicName)
   assert.Nil(suite.T(), err)
 
-  err = pubsub.Receive(ctx, suite.subscriptionName, func(message *pubsubIntegration.Message) {
+  err = pubsub.Receive(ctxWithDeadline, receiveCtx, suite.subscriptionName, func(message *pubsubIntegration.Message) {
     handlerCalled = true
 
     assert.NotNil(suite.T(), message)
@@ -346,7 +350,7 @@ func (suite *PubsubIntegrationSuite) TestReceive_SubscriptionDoesNotExist() {
 
   assert.Nil(suite.T(), err)
 
-  err = pubsub.Receive(ctx, suite.subscriptionName, func(message *pubsubIntegration.Message) {
+  err = pubsub.Receive(ctxWithDeadline, receiveCtx, suite.subscriptionName, func(message *pubsubIntegration.Message) {
     handlerCalledSecondTime = true
 
     assert.NotNil(suite.T(), message)
@@ -366,7 +370,9 @@ func (suite *PubsubIntegrationSuite) TestReceive_SubscriptionDoesNotExist() {
 }
 
 func (suite *PubsubIntegrationSuite) TestReceive_SubscriptionDoesNotExist_FailedToCreate() {
-  ctx := context.Background()
+  receiveCtx := context.Background()
+  ctxWithDeadline, _ := context.WithDeadline(receiveCtx, time.Now().Add(20*time.Second))
+
   handlerCalled := false
 
   topicMock := TopicMock{}
@@ -374,17 +380,17 @@ func (suite *PubsubIntegrationSuite) TestReceive_SubscriptionDoesNotExist_Failed
   googlePubsubTopic := googlePubsub.Topic{}
   creationError := errtrace.New("It got broken")
 
-  topicMock.On("Exists", ctx).Return(true, nil).Once()
+  topicMock.On("Exists", ctxWithDeadline).Return(true, nil).Once()
   topicMock.On("WrappedTopic").Return(&googlePubsubTopic).Once()
 
-  subscriptionMock.On("Exists", ctx).Return(false, nil).Once()
+  subscriptionMock.On("Exists", ctxWithDeadline).Return(false, nil).Once()
 
   suite.clientMock.On("Topic", suite.topicName).Return(&topicMock).Once()
   suite.clientMock.On("Subscription", suite.subscriptionName).Return(&subscriptionMock).Once()
 
   suite.clientMock.On(
     "CreateSubscription",
-    ctx,
+    ctxWithDeadline,
     suite.subscriptionName,
     googlePubsub.SubscriptionConfig{
       Topic: &googlePubsubTopic,
@@ -392,10 +398,10 @@ func (suite *PubsubIntegrationSuite) TestReceive_SubscriptionDoesNotExist_Failed
     },
   ).Return(nil, creationError).Once()
 
-  pubsub, err := pubsubIntegration.NewIntegration(ctx, suite.clientMock, suite.topicName)
+  pubsub, err := pubsubIntegration.NewIntegration(ctxWithDeadline, suite.clientMock, suite.topicName)
   assert.Nil(suite.T(), err)
 
-  err = pubsub.Receive(ctx, suite.subscriptionName, func(message *pubsubIntegration.Message) {
+  err = pubsub.Receive(ctxWithDeadline, receiveCtx, suite.subscriptionName, func(message *pubsubIntegration.Message) {
     handlerCalled = true
 
     assert.NotNil(suite.T(), message)

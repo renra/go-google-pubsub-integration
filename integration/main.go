@@ -47,7 +47,7 @@ func (i *Integration) Publish(ctx context.Context, payload string, attributes ma
   return i.Topic.Publish(ctx, &googlePubsub.Message{Data: []byte(payload), Attributes: attributes})
 }
 
-func (i *Integration) Receive(ctx context.Context, subscriptionName string, handler func(*Message)) *errtrace.Error {
+func (i *Integration) Receive(ctx context.Context, receiveCtx context.Context, subscriptionName string, handler func(*Message)) *errtrace.Error {
   if i.Subscription == nil {
     subscription := i.Client.Subscription(subscriptionName)
 
@@ -73,7 +73,7 @@ func (i *Integration) Receive(ctx context.Context, subscriptionName string, hand
     }
   }
 
-  err := i.Subscription.Receive(ctx, func(ctx context.Context, pubsubMessage *googlePubsub.Message){
+  err := i.Subscription.Receive(receiveCtx, func(ctx context.Context, pubsubMessage *googlePubsub.Message){
     if pubsubMessage != nil {
       handler(&Message{Message: pubsubMessage})
     }
