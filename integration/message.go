@@ -22,8 +22,8 @@ func (m *Message) Id() string {
   return m.Message.ID
 }
 
-func (m *Message) Payload() []byte {
-  return m.Message.Data
+func (m *Message) Payload() string {
+  return string(m.Message.Data)
 }
 
 func (m *Message) Attributes() map[string]string {
